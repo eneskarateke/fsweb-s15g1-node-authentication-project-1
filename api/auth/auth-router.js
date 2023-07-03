@@ -36,7 +36,7 @@ router.post(
     user.password = bcryptjs.hashSync(user.password, 8); // 2 üzeri 8 defa hashleyecek.
     const newUser = await UserModel.ekle(user);
     if (newUser) {
-      res.status(201).json({ newUser });
+      res.status(201).json(newUser);
     } else {
       next();
     }

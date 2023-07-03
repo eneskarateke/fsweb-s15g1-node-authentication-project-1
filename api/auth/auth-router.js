@@ -3,7 +3,7 @@
 const router = require("express").Router();
 const UserModel = require("../users/users-model");
 const authMW = require("./auth-middleware");
-const bcrypt = require("bcryptjs");
+const bcryptjs = require("bcryptjs");
 
 /**
   1 [POST] /api/auth/register { "username": "sue", "password": "1234" }
@@ -29,11 +29,11 @@ const bcrypt = require("bcryptjs");
  */
 router.post(
   "/register",
-  authMW.usernameBostami,
   authMW.sifreGecerlimi,
+  authMW.usernameBostami,
   async (req, res, next) => {
     const user = req.body;
-    user.password = bcrypt.hashSync(user.password, 8); // 2 üzeri 8 defa hashleyecek.
+    user.password = bcryptjs.hashSync(user.password, 8); // 2 üzeri 8 defa hashleyecek.
     const newUser = await UserModel.ekle(user);
     if (newUser) {
       res.status(201).json({ newUser });
@@ -59,18 +59,19 @@ router.post(
   }
  */
 
-router.post("/login", authMW.usernameVarmi, async (req, res, next) => {
-  const { password, username } = req.body;
-  // adım 1: önce kişiyi veritabanından alırız.
-  const user = await UserModel.goreBul({ username: username }).first();
-  //adım 2: password'unu check ederiz.
-  if (user && bcrypt.compareSync(password, user.password)) {
-    req.session.user = user; //Session oluşturduk.
-    res.status(200).json({ message: `Merhaba ${user.Name}!` });
-  } else {
-    next();
+router.post(
+  "/login",
+  authMW.sifreGecerlimi,
+  authMW.usernameVarmi,
+  async (req, res, next) => {
+    try {
+      req.session.user_id = req.dbUser.user_id;
+      res.status(200).json({ message: `Hoş geldin ${req.dbUser.username}` });
+    } catch (error) {
+      next(error);
+    }
   }
-});
+);
 
 /**
   3 [GET] /api/auth/logout
@@ -87,24 +88,23 @@ router.post("/login", authMW.usernameVarmi, async (req, res, next) => {
     "message": "Oturum bulunamadı!"
   }
  */
-router.get("/logout", async (req, res, next) => {
-  if (req.session && req.session.user) {
-    req.session.destroy((err) => {
-      //server tarafında session'ı destroy eder.
-      if (err) {
-        res.status(500).json({ message: "Session error!..." });
-      } else {
-        res.set(
-          "Set-Cookie",
-          "PizzaOrder=; Path=/; Expires=Mon, 01 Jan 1970 11:33:31 GMT"
-        ); //1.Client tarfında Cookie expire olsun diye geçmiş tarih verdim.
-        res.status(200).json({ message: "Çıkış yapildi" }); //2. success mesajı döndük
-      }
-    });
-  } else {
-    res.status(400).json({
-      message: "Oturum bulunamadı!",
-    });
+router.get("/logout", (req, res, next) => {
+  try {
+    if (req.session.user_id > 0) {
+      req.session.destroy((err) => {
+        if (err) {
+          res
+            .status(500)
+            .json({ message: "session destroy edilirken hata oluştu" });
+        } else {
+          res.json({ message: "Çıkış yapildi" });
+        }
+      });
+    } else {
+      res.status(200).json({ message: "Oturum bulunamadı!" });
+    }
+  } catch (error) {
+    next(error);
   }
 });
 // Diğer modüllerde kullanılabilmesi için routerı "exports" nesnesine eklemeyi unutmayın.

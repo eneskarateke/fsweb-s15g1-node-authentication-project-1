@@ -26,13 +26,16 @@ const UserModel = require("./users-model");
     "message": "Geçemezsiniz!"
   }
  */
-router.get("/", authMW.sinirli(), async (req, res) => {
+router.get("/", authMW.sinirli, async (req, res, next) => {
   const users = await UserModel.bul();
-
-  if (users) {
-    res.status(200).json(users);
-  } else {
-    res.status(401).json({ message: "Geçemezsiniz!" });
+  try {
+    if (users) {
+      res.status(200).json(users);
+    } else {
+      res.status(401).json({ message: "Geçemezsiniz!" });
+    }
+  } catch (error) {
+    next(error);
   }
 });
 

@@ -1,4 +1,6 @@
 const UserModel = require("../users/users-model");
+const bcryptjs = require("bcryptjs");
+
 /*
   Kullanıcının sunucuda kayıtlı bir oturumu yoksa
 
@@ -8,10 +10,14 @@ const UserModel = require("../users/users-model");
   }
 */
 function sinirli(req, res, next) {
-  if (req.session && req.session.user) {
-    next();
-  } else {
-    next({ status: 401, message: "Geçemezsiniz" });
+  try {
+    if (req.session && req.session.user_id) {
+      next();
+    } else {
+      res.status(401).json({ message: "Geçemezsiniz!" });
+    }
+  } catch (error) {
+    next(error);
   }
 }
 
@@ -24,11 +30,16 @@ function sinirli(req, res, next) {
   }
 */
 async function usernameBostami(req, res, next) {
-  const isExist = await UserModel.goreBul({ username: username }).first();
-  if (isExist) {
-    res.status(422).json({ message: "Username kullaniliyor" });
-  } else {
-    next();
+  try {
+    const { username } = req.body;
+    const isExist = await UserModel.goreBul({ username: username });
+    if (isExist && isExist.length > 0) {
+      res.status(422).json({ message: "Username kullaniliyor" });
+    } else {
+      next();
+    }
+  } catch (error) {
+    next(error);
   }
 }
 
@@ -37,18 +48,25 @@ async function usernameBostami(req, res, next) {
 
   status: 401
   {
-    "message": "Geçersiz kriter"
+    "message": "Geçers"iz kriter"
   }
 */
 async function usernameVarmi(req, res, next) {
-  const { username } = req.body;
-
-  const isExist = await UserModel.goreBul({ username: username }).first();
-
-  if (!isExist) {
-    res.status(401).json({ message: "Geçersiz kriter" });
-  } else {
-    next();
+  try {
+    const { password, username } = req.body;
+    // adım 1: önce kişiyi veritabanından alırız.
+    const user = await UserModel.goreBul({ username: username }).first();
+    //adım 2: password'unu check ederiz.
+    if (user && bcryptjs.compareSync(password, user.password)) {
+      req.dbUser = user; //Session oluşturduk.
+      next();
+    } else {
+      res.status(401).json({
+        message: "Geçersiz kriter",
+      });
+    }
+  } catch (error) {
+    next(error);
   }
 }
 
@@ -60,11 +78,16 @@ async function usernameVarmi(req, res, next) {
     "message": "Şifre 3 karakterden fazla olmalı"
   }
 */
-function sifreGecerlimi(req, res) {
-  if (!req.body.password || req.body.password.length < 4) {
-    res.status(422).json({ message: "Şifre 3 karakterden fazla olmalı" });
-  } else {
-    next();
+function sifreGecerlimi(req, res, next) {
+  try {
+    const { password } = req.body;
+    if (!password || password.length < 4) {
+      res.status(422).json({ message: "Şifre 3 karakterden fazla olmalı" });
+    } else {
+      next();
+    }
+  } catch (error) {
+    next(error);
   }
 }
 

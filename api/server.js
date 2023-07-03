@@ -31,10 +31,10 @@ server.use(
     secret: "En lezzetli cikolata bizde!...", //env'den alınacak.
     cookie: {
       maxAge: 1000 * 60 * 60 * 3, //3 saat geçerli olacak
-      httpOnly: false,
+      httpOnly: true,
       secure: false, //https üzerinden iletişim
     },
-    resave: true,
+    resave: false,
     saveUninitialized: false,
     store: new KnexSessionStore({
       tablename: "sessions", //Default'u aynısı

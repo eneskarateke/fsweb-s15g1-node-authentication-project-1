@@ -101,6 +101,7 @@ router.get("/logout", (req, res, next) => {
         }
       });
     } else {
+      res.set("Set-Cookie", "cikolatacips=;");
       res.status(200).json({ message: "Oturum bulunamadı!" });
     }
   } catch (error) {
